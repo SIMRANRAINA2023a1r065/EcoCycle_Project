@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>EcoCycle™ | J&K Smart Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        html, body { 
+            overflow-x: hidden; 
+            scroll-behavior: smooth; 
+            margin: 0; padding: 0; 
+            width: 100%; 
+            background: #f8fafc;
+        }
+        #cinematic-welcome {
+            position: fixed; inset: 0; background: #064e3b;
+            z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease-out; cursor: pointer;
+        }
+        .leaf { position: absolute; top: -20px; animation: fall linear infinite; pointer-events: none; z-index: 210; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+        
+        .tree-main { display: inline-block; animation: riseFromSoil 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: bottom; }
+        .bloom-effect { 
+            opacity: 0; 
+            animation: flowerBloom 1.5s ease-out 1.2s infinite alternate; 
+            filter: drop-shadow(0 0 5px rgba(255,182,193,0.6));
+        }
+        .leaf-blink {
+            position: absolute; font-size: 20px; opacity: 0;
+            animation: leafAppear 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes riseFromSoil { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        @keyframes flowerBloom { 0% { transform: scale(0.8) rotate(-5deg); opacity: 0.6; } 100% { transform: scale(1.1) rotate(5deg); opacity: 1; } }
+        @keyframes leafAppear { 0% { opacity: 0.2; transform: translateY(0); } 100% { opacity: 1; transform: translateY(-5px); } }
+
+        .moving-earth { 
+            font-size: 70px; 
+            display: inline-block;
+            animation: spinEarth 12s linear infinite; 
+        }
+        @keyframes spinEarth {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .neon-scanner-box {
+            background: #0d1b15;
+            border: 3px solid #10b981;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), inset 0 0 15px rgba(16, 185, 129, 0.3);
+            border-radius: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .neon-scanner-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: #34d399;
+            box-shadow: 0 0 15px #34d399;
+            animation: scanLine 3s ease-in-out infinite;
+            z-index: 10;
+        }
+        @keyframes scanLine {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        .upload-dropzone {
+            border: 2px dashed rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.03);
+            transition: all 0.3s ease;
+        }
+        .upload-dropzone:hover {
+            border-color: #34d399;
+            background: rgba(16, 185, 129, 0.08);
+            box-shadow: inset 0 0 15px rgba(52, 211, 153, 0.1);
+        }
+
+        .glass-result {
+            background: rgba(10, 25, 18, 0.96);
+            backdrop-filter: blur(25px);
+            border: 2px solid #10b981;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+            border-radius: 30px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        #sidebar { transition: transform 0.4s ease-in-out; transform: translateX(100%); }
+        #sidebar.open { transform: translateX(0); }
+    </style>
+</head>
+<body onload="init()">
+    <div id="welcome-leaves-container"></div>
+
+    <div id="cinematic-welcome" onclick="dismissWelcome()">
+        <div class="text-center animate__animated animate__fadeIn">
+            <h1 class="text-8xl font-black text-white mb-4 tracking-tighter">ECOCYCLE</h1>
+            <p class="text-emerald-400 text-xl font-bold tracking-[0.4em] uppercase">Jammu & Kashmir</p>
+            <div id="welcomeNameDisplay" class="mt-8 text-white text-3xl font-bold border-b-2 border-emerald-500/30 pb-2 mb-6"></div>
+            
+            <div class="mt-4 max-w-2xl px-6">
+                <p class="text-white text-xl font-medium italic mb-4">"Welcome to the movement that turns waste into wonder."</p>
+                <p class="text-emerald-100 text-lg leading-relaxed opacity-80">
+                    "The greatest threat to our planet is the belief that someone else will save it. <br> 
+                    <span class="font-bold text-emerald-400">Scan. Segregate. Save.</span> Preserving the Crown of India begins with you."
+                </p>
+            </div>
+            <p class="mt-12 text-white/50 text-sm animate-pulse tracking-widest uppercase">Click to Enter Dashboard</p>
+        </div>
+    </div>
+
+    <nav class="bg-white p-5 flex justify-between items-center sticky top-0 z-50 shadow-sm px-6 md:px-16">
+        <span class="text-2xl font-black text-green-900 tracking-tighter">EcoCycle™</span>
+        <div class="hidden md:flex flex-1 justify-end space-x-12 items-center mr-10">
+            <a href="/dashboard" class="text-green-950 font-bold uppercase text-xs tracking-widest border-b-2 border-emerald-500 pb-1">Scanner</a>
+            <a href="/benefits" class="text-green-950 font-bold uppercase text-xs tracking-widest">Benefits</a>
+            <button onclick="toggleMarketplace()" class="text-green-950 font-bold uppercase text-xs tracking-widest">Marketplace</button>
+            <button onclick="scrollToLedger()" class="text-green-950 font-bold uppercase text-xs tracking-widest">Activity Ledger</button>
+        </div>
+        <button onclick="toggleSidebar()" class="text-2xl text-green-950">☰</button>
+    </nav>
+
+    <div id="sidebar" class="fixed right-0 top-0 h-full w-80 bg-green-950 text-white z-[60] p-10 shadow-2xl flex flex-col items-center">
+        <button onclick="toggleSidebar()" class="text-3xl self-end">✕</button>
+        <div class="mt-10 text-center">
+            <p class="text-emerald-400 font-bold text-xs uppercase tracking-widest mb-2">Authenticated User</p>
+            <h4 id="sidebarName" class="text-2xl font-black tracking-tighter">User</h4>
+            <div class="mt-6 flex justify-center">
+                <span class="moving-earth">🌍</span>
+            </div>
+        </div>
+        <div class="mt-12 space-y-8 w-full">
+            <a href="/benefits" class="block text-xl font-black border-b border-white/10 pb-2">🌱 MISSION</a>
+            <a href="/dashboard" class="block text-xl font-black border-b border-white/10 pb-2">📸 SCANNER</a>
+        </div>
+        <div class="mt-auto pb-10">
+            <a href="/logout" class="bg-red-500 px-10 py-3 rounded-full font-black text-xs uppercase tracking-widest">Logout</a>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto py-10 px-6">
+        <div class="grid lg:grid-cols-2 gap-10 items-center">
+            
+            <div class="text-center lg:text-left">
+                <div class="relative inline-block mb-4">
+                    <span class="text-[120px] tree-main relative">
+                        🌳
+                        <span class="leaf-blink" style="top: 20px; left: 30px;">🍃</span>
+                        <span class="leaf-blink" style="top: 40px; right: 20px; animation-delay: 1s;">🍃</span>
+                    </span>
+                    <span class="text-[50px] bloom-effect absolute -top-4 -right-4">🌸</span>
+                </div>
+                <h2 class="text-6xl font-black text-green-950 leading-none tracking-tighter">Preserving the <br><span class="text-emerald-600">Crown of India.</span></h2>
+                <p class="mt-4 text-gray-500 font-medium max-w-md mx-auto lg:mx-0">
+                    Use our deep-learning neural network container to instantly audit trash profiles across J&K. Drop or pick any item record on the right.
+                </p>
+            </div>
+
+            <div id="scanDisplay" class="animate__animated animate__fadeInRight">
+                <div class="p-6 neon-scanner-box">
+                    <div class="absolute top-3 left-4 flex space-x-1.5 z-20">
+                        <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    </div>
+                    <p class="text-[11px] text-emerald-400 font-mono tracking-widest text-right mb-4 uppercase select-none">SYSTEM STATUS: FEED ACTIVE</p>
+                    
+                    <div class="grid grid-cols-2 gap-2 bg-black/40 p-1.5 rounded-xl border border-emerald-500/10 mb-4 text-xs font-mono tracking-wider text-center">
+                        <button id="modeSingleBtn" onclick="setScanMode('single')" class="py-2.5 rounded-lg text-black bg-emerald-400 font-black transition-all shadow-sm">
+                            🎯 SINGLE OBJECT
+                        </button>
+                        <button id="modeMultiBtn" onclick="setScanMode('multi')" class="py-2.5 rounded-lg text-white font-bold opacity-60 hover:opacity-100 transition-all">
+                            🔮 MULTI-DETECTION
+                        </button>
+                    </div>
+
+                    <input type="file" id="fileInp" class="hidden" onchange="loadPreview(event)">
+
+                    <div id="canvasViewportWrapper" class="relative w-full h-[370px] rounded-2xl border border-emerald-500/10 overflow-hidden bg-black/20">
+                        <label for="fileInp" id="dropzoneLabel" class="cursor-pointer block w-full h-full relative z-0">
+                            <div id="uploadPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 upload-dropzone text-center rounded-2xl select-none">
+                                <svg class="w-16 h-16 text-emerald-400 mb-3 animate-pulse" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"></path>
+                                </svg>
+                                <span class="text-white text-lg font-black tracking-tight">DRAG & DROP IMAGE HERE</span>
+                                <span class="text-emerald-400 text-[11px] font-mono tracking-wider uppercase mt-0.5">or click to browse local folders</span>
+                            </div>
+                            <img id="previewBox" class="hidden w-full h-full object-contain bg-black/40 rounded-2xl mx-auto">
+                        </label>
+                    </div>
+
+                    <button id="aiBtn" onclick="triggerAI()" class="w-full bg-emerald-500 text-black py-4 rounded-xl font-black text-xl mt-5 tracking-widest hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]">RUN AI ANALYSIS</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modalBox" class="hidden fixed inset-0 bg-black/90 z-[120] flex items-center justify-center p-6">
+            <div class="glass-result p-8 md:p-12 max-w-3xl w-full text-center relative overflow-hidden">
+                <p class="text-emerald-400 font-bold tracking-[0.5em] text-xs mb-2 uppercase">Classification Stream</p>
+                <h3 class="text-xl text-white/60 font-bold uppercase mb-6">Neural Inspection Diagnostics:</h3>
+                <div id="neuralItemsContainer" class="space-y-4 max-h-[50vh] overflow-y-auto mb-8 pr-2 text-left"></div>
+                <button onclick="closeModal()" class="bg-emerald-500 text-black px-12 py-4 rounded-xl font-black tracking-widest uppercase hover:scale-105 transition-transform">Close & Reset</button>
+            </div>
+        </div>
+
+        <section class="mt-24 bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm animate__animated animate__fadeInUp">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-black text-green-950 tracking-tight">Ecosystem Metrics Index</h2>
+                    <p class="text-sm text-gray-400 font-medium mt-0.5">Real-time tensor pipeline stream distribution counts across Jammu Province.</p>
+                </div>
+                <button onclick="renderAnalyticsChart()" class="text-xs bg-emerald-50 text-emerald-700 px-4 py-2.5 rounded-xl font-bold uppercase tracking-wider hover:bg-emerald-100 transition-all select-none">🔄 Refresh Vector Graph</button>
+            </div>
+            <div class="relative w-full h-80 bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+                <canvas id="ecocycleVectorChart"></canvas>
+            </div>
+        </section>
+
+        <section id="ledgerSection" class="mt-20">
+            <h2 class="text-2xl font-black text-green-950 mb-8 border-l-4 border-emerald-500 pl-4">Global Activity Ledger</h2>
+            <div id="ledgerGrid" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {% for img in database_images %}
+                <div class="bg-white p-2 rounded-3xl shadow-sm hover:shadow-lg transition-shadow">
+                    <img src="{{ url_for('static', filename='uploads/' + img) }}" class="w-full h-40 object-cover rounded-2xl">
+                </div>
+                {% else %}
+                <div class="col-span-4 py-8 text-center text-gray-400 font-bold italic bg-white rounded-3xl shadow-inner">
+                    No items logged today. Scan objects above to initialize the dashboard index log!
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <div id="marketModal" class="hidden fixed inset-0 bg-green-950/95 z-[110] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-[2rem] p-6 md:p-10 max-w-4xl w-full text-center my-8 shadow-2xl">
+            <h2 class="text-3xl font-black text-green-950 tracking-tight">ECOCYCLE™ LOCAL MARKETPLACE</h2>
+            <p class="text-emerald-600 font-bold mb-6 text-sm tracking-widest uppercase">Verified Hubs & Active Listings Across Jammu Region</p>
+            
+            <div class="overflow-x-auto rounded-2xl border border-gray-100 mb-6 max-h-[55vh]">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-green-900 text-white text-xs uppercase tracking-wider font-mono">
+                            <th class="p-4">Item Profile</th>
+                            <th class="p-4">Category</th>
+                            <th class="p-4">Value / Price Target</th>
+                            <th class="p-4">Authorized Hub / Location</th>
+                            <th class="p-4">Pin Code</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marketplaceTableBody" class="text-xs font-medium text-gray-700 divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <button onclick="toggleMarketplace()" class="bg-green-950 text-white px-12 py-4 rounded-xl font-black tracking-widest uppercase text-xs hover:bg-black transition-colors">Exit Hub Deck</button>
+        </div>
+    </div>
+
+    <script>
+        let currentScanMode = 'single';
+        let chartInstance = null;
+
+        function setScanMode(mode) {
+            currentScanMode = mode;
+            const sBtn = document.getElementById('modeSingleBtn');
+            const mBtn = document.getElementById('modeMultiBtn');
+            
+            if(mode === 'single') {
+                sBtn.className = "py-2.5 rounded-lg text-black bg-emerald-400 font-black transition-all shadow-sm";
+                mBtn.className = "py-2.5 rounded-lg text-white font-bold opacity-60 hover:opacity-100 transition-all";
+            } else {
+                mBtn.className = "py-2.5 rounded-lg text-black bg-emerald-400 font-black transition-all shadow-sm";
+                sBtn.className = "py-2.5 rounded-lg text-white font-bold opacity-60 hover:opacity-100 transition-all";
+            }
+            clearBoxes();
+        }
+
+        function clearBoxes() {
+            const wrapper = document.getElementById('canvasViewportWrapper');
+            const boxes = wrapper.querySelectorAll('.runtime-bbox');
+            boxes.forEach(b => b.remove());
+        }
+
+        function setupUser() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rawParam = urlParams.get('username');
+            const loginName = rawParam ? decodeURIComponent(rawParam) : "Eco-Contributor"; 
+            const isRefreshed = sessionStorage.getItem('hasVisited');
+            
+            if (!isRefreshed) {
+                document.getElementById('welcomeNameDisplay').innerText = "Hello, " + loginName;
+                document.getElementById('sidebarName').innerText = loginName;
+                sessionStorage.setItem('hasVisited', 'true');
+                sessionStorage.setItem('cachedName', loginName);
+            } else {
+                const cached = sessionStorage.getItem('cachedName') || "Eco-Contributor";
+                document.getElementById('welcomeNameDisplay').innerText = cached + " 🌱";
+                document.getElementById('sidebarName').innerText = cached;
+            }
+        }
+
+        function init() {
+            setupUser();
+            spawnLeaves();
+            setupDragAndDrop();
+            renderAnalyticsChart();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('openMarket') === 'true') toggleMarketplace();
+        }
+
+        function renderAnalyticsChart() {
+            fetch('/api/analytics')
+            .then(res => res.json())
+            .then(metrics => {
+                const ctx = document.getElementById('ecocycleVectorChart').getContext('2d');
+                if (chartInstance) chartInstance.destroy();
+                
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['RECYCLE TARGETS', 'REUSE CRITERIA', 'REPAIR RESTORATION'],
+                        datasets: [{
+                            label: 'Logged Frame Items Count',
+                            data: [metrics.Recycle, metrics.Reuse, metrics.Repair],
+                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+                            borderColor: ['#1d4ed8', '#047857', '#b45309'],
+                            borderWidth: 2,
+                            borderRadius: 12
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { font: { weight: 'bold', family: 'monospace' } } },
+                            y: { grid: { color: '#e2e8f0' }, ticks: { stepSize: 1, font: { weight: 'bold' } }, axis: 'y' }
+                        }
+                    }
+                });
+            });
+        }
+
+        function spawnLeaves() {
+            const box = document.getElementById('welcome-leaves-container');
+            for(let i=0; i<10; i++){
+                let l = document.createElement('div');
+                l.className = 'leaf'; l.innerHTML = '🍃';
+                l.style.left = Math.random()*100 + 'vw';
+                l.style.animationDuration = (Math.random()*5 + 3) + 's';
+                box.appendChild(l);
+            }
+        }
+
+        function dismissWelcome() {
+            document.getElementById('cinematic-welcome').style.opacity = '0';
+            setTimeout(() => { document.getElementById('cinematic-welcome').style.display = 'none'; }, 800);
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        
+        function toggleMarketplace() { 
+            const modal = document.getElementById('marketModal');
+            modal.classList.toggle('hidden');
+            
+            if(!modal.classList.contains('hidden')) {
+                fetch('/api/marketplace')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('marketplaceTableBody');
+                    tbody.innerHTML = ''; 
+                    
+                    data.items.forEach(item => {
+                        let badgeColor = item.category === 'Recycle' ? 'bg-blue-100 text-blue-800' : (item.category === 'Reuse' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
+                        const row = `
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4 font-bold text-gray-900">${item.item}</td>
+                                <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${badgeColor}">${item.category}</span></td>
+                                <td class="p-4 text-green-700 font-extrabold font-mono">${item.price}</td>
+                                <td class="p-4">
+                                    <div class="font-bold text-gray-800">${item.shop}</div>
+                                    <div class="text-[10px] text-gray-400 font-sans mt-0.5">${item.location}</div>
+                                </td>
+                                <td class="p-4 font-mono text-gray-500 font-bold">${item.pincode}</td>
+                            </tr>
+                        `;
+                        tbody.insertAdjacentHTML('beforeend', row);
+                    });
+                })
+                .catch(err => console.error("Error loading marketplace data:", err));
+            }
+        }
+        
+        function scrollToLedger() { document.getElementById('ledgerSection').scrollIntoView({behavior:'smooth'}); }
+        
+        function closeModal() { 
+            document.getElementById('modalBox').classList.add('hidden'); 
+            clearBoxes();
+            renderAnalyticsChart();
+        }
+
+        function displayImageFile(file) {
+            const r = new FileReader();
+            r.onload = () => {
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                const pBox = document.getElementById('previewBox');
+                pBox.src = r.result;
+                pBox.classList.remove('hidden');
+                clearBoxes();
+            }
+            if(file) { r.readAsDataURL(file); }
+        }
+
+        function loadPreview(e) {
+            if(e.target.files[0]) { displayImageFile(e.target.files[0]); }
+        }
+
+        function setupDragAndDrop() {
+            const zone = document.getElementById('dropzoneLabel');
+            const fileInp = document.getElementById('fileInp');
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    zone.style.borderColor = "#34d399";
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    zone.style.borderColor = "rgba(16, 185, 129, 0.1)";
+                }, false);
+            });
+
+            zone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if(files.length > 0) {
+                    fileInp.files = files; 
+                    displayImageFile(files[0]);
+                }
+            }, false);
+        }
+
+        function triggerAI() {
+            const btn = document.getElementById('aiBtn');
+            const fileInput = document.getElementById('fileInp');
+            if (!fileInput.files[0]) return alert("Please upload or drag an image asset into the scanner matrix first!");
+            
+            btn.innerText = "Analyzing Frame Tensors...";
+            let fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            fd.append('mode', currentScanMode);
+            
+            clearBoxes();
+
+            fetch('/analyze', { method: 'POST', body: fd })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerText = "RUN AI ANALYSIS";
+                if (data.error) return alert("Analysis Failed: " + data.error);
+
+                const container = document.getElementById('neuralItemsContainer');
+                container.innerHTML = ''; 
+
+                const imgBox = document.getElementById('previewBox');
+                const naturalW = data.width;
+                const naturalH = data.height;
+
+                // Accurate Rendered Image Viewport Dimensions Tracking
+                const rect = imgBox.getBoundingClientRect();
+                const displayW = rect.width;
+                const displayH = rect.height;
+
+                const scaleX = displayW / naturalW;
+                const scaleY = displayH / naturalH;
+
+                const containerWidth = imgBox.parentElement.clientWidth;
+                const containerHeight = imgBox.parentElement.clientHeight;
+                const offsetX = (containerWidth - displayW) / 2;
+                const offsetY = (containerHeight - displayH) / 2;
+
+                data.objects.forEach((obj, idx) => {
+                    const cardHTML = `
+                        <div class="bg-white/5 border border-emerald-500/20 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <h4 class="text-2xl font-black text-emerald-400 tracking-tight">${obj.label}</h4>
+                                <p class="text-white/80 text-sm mt-1 italic font-medium">"${obj.reason}"</p>
+                                <div class="flex gap-4 mt-3 text-xs text-white/40 font-mono">
+                                    <span>ACTION: <b class="text-white">${obj.action}</b></span>
+                                    <span>EST VALUE: <b class="text-yellow-400">${obj.est_value}</b></span>
+                                </div>
+                            </div>
+                            <div class="bg-emerald-500 text-black font-black text-center px-4 py-2 rounded-xl text-sm self-start md:self-center whitespace-nowrap">
+                                ${obj.confidence} Score
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', cardHTML);
+
+                    if (obj.box) {
+                        const boxDiv = document.createElement('div');
+                        boxDiv.className = 'runtime-bbox absolute border-2 border-emerald-400 bg-emerald-400/10 rounded-lg pointer-events-none z-10';
+                        
+                        boxDiv.style.left = (obj.box.x * scaleX + offsetX) + 'px';
+                        boxDiv.style.top = (obj.box.y * scaleY + offsetY) + 'px';
+                        boxDiv.style.width = (obj.box.w * scaleX) + 'px';
+                        boxDiv.style.height = (obj.box.h * scaleY) + 'px';
+                        
+                        document.getElementById('canvasViewportWrapper').appendChild(boxDiv);
+                    }
+                });
+
+                document.getElementById('modalBox').classList.remove('hidden');
+            })
+            .catch(err => {
+                btn.innerText = "RUN AI ANALYSIS";
+                alert("Runtime error processing model predictions matrix!");
+            });
+        }
+    </script>
+</body>
+</html>
